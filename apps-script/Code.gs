@@ -166,17 +166,15 @@ function parseScores(text) {
   while ((totMatch = totRe.exec(norm)) !== null) { totalsIdx = totMatch.index; }
 
   if (totalsIdx >= 0) {
-    var pairs = norm.slice(totalsIdx).match(/([WL])\s*(\d+)/g) || [];
-    var decode = function(s) {
-      var p = s.match(/([WL])\s*(\d+)/);
-      return (p[1] === 'W' ? '√' : 'X') + p[2];
-    };
-    if (pairs.length >= 3) {
+    // Extract plain numbers after win/loss markers — markers not stored, just the scores
+    var totNums = norm.slice(totalsIdx).match(/[WL]\s*(\d+)/g) || [];
+    var extractNum = function(s) { return +s.replace(/[WL]\s*/, ''); };
+    if (totNums.length >= 3) {
       result.totals = {
-        game1: decode(pairs[0]),
-        game2: decode(pairs[1]),
-        game3: decode(pairs[2]),
-        total: pairs[3] ? decode(pairs[3]) : ''
+        game1: extractNum(totNums[0]),
+        game2: extractNum(totNums[1]),
+        game3: extractNum(totNums[2]),
+        total: totNums[3] ? extractNum(totNums[3]) : ''
       };
     }
   }
