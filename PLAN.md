@@ -5,6 +5,7 @@
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Vanilla HTML/JS score upload → Google Sheets | ✅ Built |
+| 1.1 | Show version + deploy timestamp in UI footer | After test passes |
 | 2 | React + Vite + Tailwind + shadcn/ui full tournament app | Planned |
 
 ---
