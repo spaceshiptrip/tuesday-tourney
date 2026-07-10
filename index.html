@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tuesday Tourney — Score Upload</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Tuesday Tourney</h1>
+      <p class="subtitle">Upload a bowling score screenshot to record it in the league sheet.</p>
+    </header>
+
+    <div id="drop-zone" class="drop-zone">
+      <input type="file" id="file-input" accept="image/*">
+      <div class="drop-zone-prompt">
+        <div class="icon">🎳</div>
+        <p>Drag &amp; drop a score screenshot here</p>
+        <p class="or">or</p>
+        <label for="file-input" class="browse-btn">Choose file</label>
+      </div>
+    </div>
+
+    <div id="preview-section" hidden>
+      <img id="preview-img" alt="Score preview">
+      <div class="actions">
+        <button id="upload-btn" class="btn-primary">Upload Scores</button>
+        <button id="clear-btn" class="btn-secondary">Clear</button>
+      </div>
+    </div>
+
+    <div id="status" hidden>
+      <span id="status-icon"></span>
+      <span id="status-message"></span>
+    </div>
+
+    <div id="results" hidden>
+      <h2 id="results-team"></h2>
+      <p id="results-date" class="results-meta"></p>
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Game 1</th>
+            <th>Game 2</th>
+            <th>Game 3</th>
+            <th>Series</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+      <div class="actions">
+        <button id="upload-another-btn" class="btn-secondary">Upload Another</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
