@@ -1,5 +1,5 @@
 // Paste your deployed Apps Script web app URL here after setup
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxm-K55RR7MVzgErkm6xMhK-b0jUr0WHRqZy_G7NbbkBqkYzydNSa76zz3fwPEfDCfQ/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbygg49G6Id3u7LYKsEbH7gduYBQK981GIxdMxJ4NiVMKy9Kzd-3XRoNIQvYBjBTn22GZA/exec';
 
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
