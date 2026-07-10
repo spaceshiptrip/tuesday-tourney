@@ -95,80 +95,87 @@ function ocrImage(b64, mimeType) {
 //          Totals  X801  √901  X764  X2466
 // ============================================================
 function parseScores(text) {
-  var lines = text.split('\n')
+  var lines = text.split(/\r?\n/)
     .map(function(l) { return l.trim(); })
     .filter(function(l) { return l.length > 0; });
 
+  // Full text on one string for global searches (Drive OCR often omits line breaks on TV screenshots)
+  var fullText = lines.join(' ');
+
   var result = { team: '', players: [], pins: null, hdcp: null, totals: null };
 
-  // Team name: first line containing "Team:"
-  for (var i = 0; i < lines.length; i++) {
-    var tm = lines[i].match(/Team[:\s]+(.+?)(?:\s+1st|\s+Games|$)/i);
-    if (tm) { result.team = tm[1].trim(); break; }
+  // Team name
+  var tm = fullText.match(/Team[:\s]+(.+?)(?:\s+1st|\s+\d{3}|\s+Games|$)/i);
+  if (tm) result.team = tm[1].trim();
+
+  // Player rows: name + game1 (2-3 digits) + game2 + game3 + series (3-4 digits)
+  // Try line-by-line first (clean OCR), then fall back to global search (no-newline OCR)
+  var skipNames = /^(Pins|HDCP|Totals|Games|Press|Key|Exit|Recap|Sheet|Team)/i;
+
+  var playerLineRe = /^([A-Za-z][A-Za-z\s.\-']+?)\s+(\d{2,3})\s+(\d{2,3})\s+(\d{2,3})\s+(\d{3,4})\s*$/;
+  lines.forEach(function(line) {
+    if (skipNames.test(line)) return;
+    var m = line.match(playerLineRe);
+    if (m) {
+      result.players.push({ name: m[1].trim(), game1: +m[2], game2: +m[3], game3: +m[4], series: +m[5] });
+    }
+  });
+
+  // Fallback: scan full text with global regex (handles single-line OCR output)
+  if (result.players.length === 0) {
+    var playerGlobalRe = /([A-Za-z][A-Za-z\s.\-']{3,20}?)\s+(\d{2,3})\s+(\d{2,3})\s+(\d{2,3})\s+(\d{3,4})/g;
+    var m;
+    while ((m = playerGlobalRe.exec(fullText)) !== null) {
+      var name = m[1].trim();
+      if (skipNames.test(name)) continue;
+      if (result.players.some(function(p) { return p.name === name; })) continue;
+      result.players.push({ name: name, game1: +m[2], game2: +m[3], game3: +m[4], series: +m[5] });
+    }
   }
 
-  // Player rows: text name + exactly 4 numbers (game1, game2, game3, series)
-  // Series is typically 3–4 digits; individual game scores are 2–3 digits.
-  var playerRe = /^([A-Za-z][A-Za-z\s.\-']+?)\s+(\d{2,3})\s+(\d{2,3})\s+(\d{2,3})\s+(\d{3,4})\s*$/;
-  var skipRe   = /^(Pins|\+HDCP|Totals|Games|1st|2nd|3rd)/i;
+  // Summary rows — search full text by keyword (handles both line-break and no-line-break OCR)
+  var pinsM = fullText.match(/Pins\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+))?/i);
+  if (pinsM) {
+    result.pins = { game1: +pinsM[1], game2: +pinsM[2], game3: +pinsM[3], total: pinsM[4] ? +pinsM[4] : '' };
+  }
 
-  lines.forEach(function(line) {
-    if (skipRe.test(line)) return;
-    var m = line.match(playerRe);
-    if (m) {
-      result.players.push({
-        name:  m[1].trim(),
-        game1: +m[2],
-        game2: +m[3],
-        game3: +m[4],
-        series: +m[5]
-      });
-    }
-  });
+  var hdcpM = fullText.match(/HDCP\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+))?/i);
+  if (hdcpM) {
+    result.hdcp = { game1: +hdcpM[1], game2: +hdcpM[2], game3: +hdcpM[3], total: hdcpM[4] ? +hdcpM[4] : '' };
+  }
 
-  // Summary rows — search all lines for keywords
-  lines.forEach(function(line) {
-    var nums;
-
-    if (/\bPins\b/i.test(line)) {
-      nums = line.match(/\d+/g);
-      if (nums && nums.length >= 4) {
-        result.pins = { game1: +nums[0], game2: +nums[1], game3: +nums[2], total: +nums[3] };
-      }
-    }
-
-    if (/HDCP/i.test(line)) {
-      nums = line.match(/\d+/g);
-      if (nums && nums.length >= 4) {
-        result.hdcp = { game1: +nums[0], game2: +nums[1], game3: +nums[2], total: +nums[3] };
-      }
-    }
-
-    // Totals row has win/loss markers (X = loss, √/v/✓ = win)
-    if (/Totals/i.test(line) && /[Xv✓√]/i.test(line)) {
-      // Normalise markers then extract (marker)(score) pairs
-      var norm   = line.replace(/[✓√]/gi, 'W').replace(/\bv\b/gi, 'W').replace(/\bX\b/g, 'L');
-      var pairs  = norm.match(/([WL])\s*(\d+)/g) || [];
-      var decode = function(s) {
-        var p = s.match(/([WL])\s*(\d+)/);
-        return (p[1] === 'W' ? '√' : 'X') + ' ' + p[2];
+  // Totals row — normalize all win/loss variants (X=loss, √/V/v/✓=win) then extract marker+score pairs
+  var norm = fullText
+    .replace(/[✓√]/g, 'W')
+    .replace(/\bV\b/g, 'W')   // capital V (common OCR misread of √)
+    .replace(/\bv\b/g, 'W')
+    .replace(/\bX\b/g, 'L');
+  var totalsIdx = norm.search(/\bTotals\b/i);
+  if (totalsIdx >= 0) {
+    var pairs = norm.slice(totalsIdx).match(/([WL])\s*(\d+)/g) || [];
+    var decode = function(s) {
+      var p = s.match(/([WL])\s*(\d+)/);
+      return (p[1] === 'W' ? '√' : 'X') + p[2];
+    };
+    if (pairs.length >= 3) {
+      result.totals = {
+        game1: decode(pairs[0]),
+        game2: decode(pairs[1]),
+        game3: decode(pairs[2]),
+        total: pairs[3] ? decode(pairs[3]) : ''
       };
-      if (pairs.length >= 4) {
-        result.totals = {
-          game1: decode(pairs[0]),
-          game2: decode(pairs[1]),
-          game3: decode(pairs[2]),
-          total: decode(pairs[3])
-        };
-      } else {
-        // Fallback: store raw numbers without markers
-        nums = line.match(/\d+/g);
-        if (nums && nums.length >= 4) {
-          result.totals = { game1: nums[0], game2: nums[1], game3: nums[2], total: nums[3] };
-        }
-      }
     }
-  });
+  }
+
+  // The OCR sometimes dumps the rightmost column (series totals) at the very end of the text.
+  // Pattern: 4-digit pins total, 3-digit hdcp total, 4-digit totals total — e.g. "2010 456 2466"
+  if (result.pins && !result.pins.total) {
+    var trailing = fullText.match(/(\d{4})\s+(\d{3})\s+(\d{4})\s*$/);
+    if (trailing) {
+      result.pins.total = +trailing[1];
+      if (result.hdcp) result.hdcp.total = +trailing[2];
+    }
+  }
 
   return result;
 }
