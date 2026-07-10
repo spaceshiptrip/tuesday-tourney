@@ -1,7 +1,7 @@
 // ============================================================
 // CONFIGURATION — update these two values before deploying
 // ============================================================
-var SHEET_ID   = 'YOUR_GOOGLE_SHEET_ID_HERE'; // from the Sheet URL
+var SHEET_ID   = '14AzRptb55HlOfeQ46BOD4fS8YBleAw-27HNVJXqvP6U';
 var SHEET_NAME = 'Scores';                     // tab name
 
 // ============================================================
