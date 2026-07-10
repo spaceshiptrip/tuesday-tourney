@@ -151,12 +151,20 @@ function parseScores(text) {
   }
 
   // Totals row — normalize all win/loss variants (X=loss, √/V/v/✓=win) then extract marker+score pairs
+  // Use X(?=\d)|\bX\b so both "X801" and "X 801" are caught.
+  // Use V(?=\d)|\bV\b so "V901" (no space between V and digit) is caught — \bV\b misses it.
   var norm = fullText
     .replace(/[✓√]/g, 'W')
-    .replace(/\bV\b/g, 'W')   // capital V (common OCR misread of √)
-    .replace(/\bv\b/g, 'W')
-    .replace(/\bX\b/g, 'L');
-  var totalsIdx = norm.search(/\bTotals\b/i);
+    .replace(/V(?=\d)|\bV\b/g, 'W')
+    .replace(/v(?=\d)|\bv\b/g, 'W')
+    .replace(/X(?=\d)|\bX\b/g, 'L');
+
+  // Find the LAST "Totals" — the header row also has "Totals" and comes first
+  var totalsIdx = -1;
+  var totRe = /\bTotals\b/gi;
+  var totMatch;
+  while ((totMatch = totRe.exec(norm)) !== null) { totalsIdx = totMatch.index; }
+
   if (totalsIdx >= 0) {
     var pairs = norm.slice(totalsIdx).match(/([WL])\s*(\d+)/g) || [];
     var decode = function(s) {
