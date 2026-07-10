@@ -186,6 +186,7 @@ function parseScores(text) {
     if (trailing) {
       result.pins.total = +trailing[1];
       if (result.hdcp) result.hdcp.total = +trailing[2];
+      if (result.totals && !result.totals.total) result.totals.total = +trailing[3];
     }
   }
 
