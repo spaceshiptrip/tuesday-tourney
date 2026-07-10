@@ -230,8 +230,8 @@ h1 {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  justify-content: space-between !important;
-  gap: 1rem;
+  justify-content: center !important;
+  gap: 1.25rem;
 }
 
 img.footer-logo {
