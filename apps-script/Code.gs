@@ -124,22 +124,28 @@ function parseScores(text) {
   // Fallback: scan full text with global regex (handles single-line OCR output)
   if (result.players.length === 0) {
     var playerGlobalRe = /([A-Za-z][A-Za-z\s.\-']{3,20}?)\s+(\d{2,3})\s+(\d{2,3})\s+(\d{2,3})\s+(\d{3,4})/g;
-    var m;
-    while ((m = playerGlobalRe.exec(fullText)) !== null) {
-      var name = m[1].trim();
-      if (skipNames.test(name)) continue;
+    var containsKeyword = /\b(Totals|1st|2nd|3rd|Games|Pins|HDCP|Press|Key|Exit|Recap|Sheet|Team)\b/i;
+    var gm;
+    while ((gm = playerGlobalRe.exec(fullText)) !== null) {
+      var name = gm[1].trim();
+      // If the name swept up "Totals" (header word), extract the real name after it
+      if (/\bTotals\b/i.test(name)) {
+        name = name.replace(/^.*\bTotals\b\s*/i, '').trim();
+      }
+      if (!name || containsKeyword.test(name)) continue;
       if (result.players.some(function(p) { return p.name === name; })) continue;
-      result.players.push({ name: name, game1: +m[2], game2: +m[3], game3: +m[4], series: +m[5] });
+      result.players.push({ name: name, game1: +gm[2], game2: +gm[3], game3: +gm[4], series: +gm[5] });
     }
   }
 
   // Summary rows — search full text by keyword (handles both line-break and no-line-break OCR)
-  var pinsM = fullText.match(/Pins\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+))?/i);
+  // Require total to be 3-4 digits so stray single-digit numbers (e.g. lane "1" sign) are ignored
+  var pinsM = fullText.match(/Pins\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d{3,4}))?/i);
   if (pinsM) {
     result.pins = { game1: +pinsM[1], game2: +pinsM[2], game3: +pinsM[3], total: pinsM[4] ? +pinsM[4] : '' };
   }
 
-  var hdcpM = fullText.match(/HDCP\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+))?/i);
+  var hdcpM = fullText.match(/HDCP\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d{3,4}))?/i);
   if (hdcpM) {
     result.hdcp = { game1: +hdcpM[1], game2: +hdcpM[2], game3: +hdcpM[3], total: hdcpM[4] ? +hdcpM[4] : '' };
   }
