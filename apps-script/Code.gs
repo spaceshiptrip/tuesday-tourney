@@ -41,7 +41,7 @@ function doPost(e) {
         game1: parsed.pins.game1, game2: parsed.pins.game2, game3: parsed.pins.game3, series: parsed.pins.total });
     }
     if (parsed.hdcp) {
-      rows.push({ type: 'hdcp', player: '+HDCP',
+      rows.push({ type: 'hdcp', player: 'HDCP',
         game1: parsed.hdcp.game1, game2: parsed.hdcp.game2, game3: parsed.hdcp.game3, series: parsed.hdcp.total });
     }
     if (parsed.totals) {
@@ -181,11 +181,15 @@ function parseScores(text) {
 
   // The OCR sometimes dumps the rightmost column (series totals) at the very end of the text.
   // Pattern: 4-digit pins total, 3-digit hdcp total, 4-digit totals total — e.g. "2010 456 2466"
-  if (result.pins && !result.pins.total) {
+  // Run whenever ANY summary total is missing, not only when Pins is missing.
+  var needsTrailing = (result.pins   && !result.pins.total)
+                   || (result.hdcp   && !result.hdcp.total)
+                   || (result.totals && !result.totals.total);
+  if (needsTrailing) {
     var trailing = fullText.match(/(\d{4})\s+(\d{3})\s+(\d{4})\s*$/);
     if (trailing) {
-      result.pins.total = +trailing[1];
-      if (result.hdcp) result.hdcp.total = +trailing[2];
+      if (result.pins   && !result.pins.total)   result.pins.total   = +trailing[1];
+      if (result.hdcp   && !result.hdcp.total)   result.hdcp.total   = +trailing[2];
       if (result.totals && !result.totals.total) result.totals.total = +trailing[3];
     }
   }
@@ -219,7 +223,7 @@ function writeToSheet(parsed, date) {
       parsed.pins.game1, parsed.pins.game2, parsed.pins.game3, parsed.pins.total, 'pins']);
   }
   if (parsed.hdcp) {
-    sheet.appendRow([date, team, '+HDCP',
+    sheet.appendRow([date, team, 'HDCP',
       parsed.hdcp.game1, parsed.hdcp.game2, parsed.hdcp.game3, parsed.hdcp.total, 'hdcp']);
   }
   if (parsed.totals) {
